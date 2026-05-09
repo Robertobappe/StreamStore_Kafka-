@@ -1,34 +1,54 @@
 import json
+import os
 import uuid
 
 from confluent_kafka import Producer
 
+BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+TOPIC = os.getenv("KAFKA_TOPIC", "orders")
+
 producer_config = {
-    "bootstrap.servers": "localhost:9092"
+    "bootstrap.servers": BOOTSTRAP_SERVERS
 }
 
-producer = Producer(producer_config)
 
 def delivery_report(err, msg):
     if err:
-        print(f"❌ Delivery failed: {err}")
+        print(f"Delivery failed: {err}")
     else:
-        print(f"✅ Delivered {msg.value().decode("utf-8")}")
-        print(f"✅ Delivered to {msg.topic()} : partition {msg.partition()} : at offset {msg.offset()}")
+        print(f"Delivered {msg.value().decode('utf-8')}")
+        print(f"Delivered to {msg.topic()} : partition {msg.partition()} : at offset {msg.offset()}")
 
-order = {
-    "order_id": str(uuid.uuid4()),
-    "user": "lara",
-    "item": "frozen yogurt",
-    "quantity": 10
-}
 
-value = json.dumps(order).encode("utf-8")
+def main():
+    producer = Producer(producer_config)
 
-producer.produce(
-    topic="orders",
-    value=value,
-    callback=delivery_report
-)
+    order = {
+        "order_id": str(uuid.uuid4()),
+        "user": "lara",
+        "item": "frozen yogurt",
+        "quantity": 10
+    }
 
-producer.flush()
+    value = json.dumps(order).encode("utf-8")
+
+    try:
+        producer.produce(
+            topic=TOPIC,
+            value=value,
+            callback=delivery_report
+        )
+    except BufferError:
+        print(f"Producer queue is full ({len(producer)} messages pending). Waiting...")
+        producer.flush()
+        producer.produce(
+            topic=TOPIC,
+            value=value,
+            callback=delivery_report
+        )
+
+    producer.flush()
+
+
+if __name__ == "__main__":
+    main()
