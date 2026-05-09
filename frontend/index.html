@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StreamStore — Real-Time Dashboard</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <span class="logo-icon">&#9889;</span>
+                <h1>StreamStore</h1>
+            </div>
+            <div class="connection-status" id="connectionStatus">
+                <span class="status-dot disconnected"></span>
+                <span>Disconnected</span>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon orders-icon">&#128230;</div>
+                <div class="stat-info">
+                    <span class="stat-label">Total Orders</span>
+                    <span class="stat-value" id="totalOrders">0</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon items-icon">&#128722;</div>
+                <div class="stat-info">
+                    <span class="stat-label">Items Sold</span>
+                    <span class="stat-value" id="totalItems">0</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon revenue-icon">&#128176;</div>
+                <div class="stat-info">
+                    <span class="stat-label">Revenue</span>
+                    <span class="stat-value" id="totalRevenue">$0.00</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon avg-icon">&#128200;</div>
+                <div class="stat-info">
+                    <span class="stat-label">Avg / Order</span>
+                    <span class="stat-value" id="avgOrder">$0.00</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="charts-grid">
+            <div class="chart-card">
+                <h2>Orders Timeline</h2>
+                <div class="chart-container">
+                    <canvas id="timelineChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <h2>Top Products</h2>
+                <div class="chart-container">
+                    <canvas id="productsChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section class="bottom-grid">
+            <div class="chart-card">
+                <h2>Revenue by Product</h2>
+                <div class="chart-container">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+            <div class="card orders-feed">
+                <h2>Live Orders <span class="live-badge">LIVE</span></h2>
+                <div class="orders-list" id="ordersList">
+                    <div class="empty-state">Waiting for orders...</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>StreamStore Kafka &mdash; Real-Time Event Streaming Dashboard</p>
+    </footer>
+
+    <script src="/js/app.js"></script>
+</body>
+</html>
