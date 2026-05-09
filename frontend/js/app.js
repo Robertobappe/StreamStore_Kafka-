@@ -151,24 +151,48 @@ function animateValue(elementId, value) {
     setTimeout(() => el.classList.remove('animate'), 300);
 }
 
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function createOrderElement(order, animate) {
+    const item = document.createElement('div');
+    item.className = 'order-item';
+    if (!animate) item.style.animation = 'none';
+
+    const info = document.createElement('div');
+    info.className = 'order-info';
+
+    const product = document.createElement('span');
+    product.className = 'order-product';
+    product.textContent = `${order.quantity}x ${capitalize(order.item)}`;
+
+    const details = document.createElement('span');
+    details.className = 'order-details';
+    details.textContent = `${capitalize(order.user)} \u2022 ${formatTime(order.timestamp)}`;
+
+    info.appendChild(product);
+    info.appendChild(details);
+
+    const price = document.createElement('span');
+    price.className = 'order-price';
+    price.textContent = `$${order.revenue.toFixed(2)}`;
+
+    item.appendChild(info);
+    item.appendChild(price);
+    return item;
+}
+
 function addOrderToFeed(order) {
     const list = document.getElementById('ordersList');
     const empty = list.querySelector('.empty-state');
     if (empty) empty.remove();
 
-    const item = document.createElement('div');
-    item.className = 'order-item';
-    item.innerHTML = `
-        <div class="order-info">
-            <span class="order-product">${order.quantity}x ${capitalize(order.item)}</span>
-            <span class="order-details">${capitalize(order.user)} &bull; ${formatTime(order.timestamp)}</span>
-        </div>
-        <span class="order-price">$${order.revenue.toFixed(2)}</span>
-    `;
-
+    const item = createOrderElement(order, true);
     list.insertBefore(item, list.firstChild);
 
-    // Keep max 50 items
     while (list.children.length > 50) {
         list.removeChild(list.lastChild);
     }
@@ -178,20 +202,14 @@ function loadOrders(orders) {
     const list = document.getElementById('ordersList');
     list.innerHTML = '';
     if (!orders || orders.length === 0) {
-        list.innerHTML = '<div class="empty-state">Waiting for orders...</div>';
+        const empty = document.createElement('div');
+        empty.className = 'empty-state';
+        empty.textContent = 'Waiting for orders...';
+        list.appendChild(empty);
         return;
     }
     orders.forEach(order => {
-        const item = document.createElement('div');
-        item.className = 'order-item';
-        item.style.animation = 'none';
-        item.innerHTML = `
-            <div class="order-info">
-                <span class="order-product">${order.quantity}x ${capitalize(order.item)}</span>
-                <span class="order-details">${capitalize(order.user)} &bull; ${formatTime(order.timestamp)}</span>
-            </div>
-            <span class="order-price">$${order.revenue.toFixed(2)}</span>
-        `;
+        const item = createOrderElement(order, false);
         list.appendChild(item);
     });
 }

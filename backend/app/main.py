@@ -2,7 +2,9 @@ import asyncio
 import json
 import os
 from collections import defaultdict
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from pathlib import Path
 
 from confluent_kafka import Consumer, KafkaError
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -14,7 +16,18 @@ BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
 GROUP_ID = os.getenv("KAFKA_GROUP_ID", "dashboard-consumer")
 TOPIC = os.getenv("KAFKA_TOPIC", "orders")
 
-app = FastAPI(title="StreamStore Dashboard API")
+@asynccontextmanager
+async def lifespan(application: FastAPI):
+    task = asyncio.create_task(kafka_consumer_loop())
+    yield
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+
+
+app = FastAPI(title="StreamStore Dashboard API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -109,11 +122,12 @@ async def kafka_consumer_loop():
     consumer = Consumer(consumer_config)
     consumer.subscribe([TOPIC])
 
+    loop = asyncio.get_event_loop()
+
     try:
         while True:
-            msg = consumer.poll(0.5)
+            msg = await loop.run_in_executor(None, consumer.poll, 0.5)
             if msg is None:
-                await asyncio.sleep(0.1)
                 continue
             if msg.error():
                 if msg.error().code() == KafkaError._PARTITION_EOF:
@@ -129,7 +143,8 @@ async def kafka_consumer_loop():
                 "order": processed,
                 "stats": get_stats_dict(),
             })
-            await asyncio.sleep(0.05)
+    except asyncio.CancelledError:
+        pass
     except Exception as e:
         print(f"Kafka consumer error: {e}")
     finally:
@@ -148,11 +163,6 @@ def get_stats_dict():
         },
         "orders_timeline": stats["orders_timeline"],
     }
-
-
-@app.on_event("startup")
-async def startup():
-    asyncio.create_task(kafka_consumer_loop())
 
 
 @app.get("/api/stats")
@@ -184,13 +194,13 @@ async def websocket_endpoint(ws: WebSocket):
             connected_clients.remove(ws)
 
 
-FRONTEND_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "..", "frontend")
+FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
 
 
 @app.get("/")
 async def serve_index():
-    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+    return FileResponse(FRONTEND_DIR / "index.html")
 
 
-app.mount("/css", StaticFiles(directory=os.path.join(FRONTEND_DIR, "css")), name="css")
-app.mount("/js", StaticFiles(directory=os.path.join(FRONTEND_DIR, "js")), name="js")
+app.mount("/css", StaticFiles(directory=str(FRONTEND_DIR / "css")), name="css")
+app.mount("/js", StaticFiles(directory=str(FRONTEND_DIR / "js")), name="js")
